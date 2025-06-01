@@ -1,8 +1,9 @@
-
 import tweepy
 import schedule
 import time
 import os
+from flask import Flask
+from threading import Thread
 
 # Load Twitter API keys from environment
 API_KEY = os.environ["API_KEY"]
@@ -47,19 +48,51 @@ def post_shloka():
     else:
         print("🎉 All shlokas have been posted.")
 
-# Test the bot with preview
-print("🤖 Twitter Bot Starting...")
-print("📋 Preview mode - showing what will be tweeted:")
-post_shloka()
+# Flask web server
+app = Flask(__name__)
 
-# Schedule next posts
-schedule.every().day.at("08:00").do(post_shloka)
-schedule.every().day.at("20:00").do(post_shloka)
+@app.route('/')
+def home():
+    return "🤖 Twitter Bot is running! Status: Active"
 
-print("⏰ Bot scheduled for 08:00 and 20:00 daily")
-print("🔄 Running continuously...")
+@app.route('/ping')
+def ping():
+    return "pong"
 
-# Main loop
-while True:
-    schedule.run_pending()
-    time.sleep(60)
+@app.route('/status')
+def status():
+    index = get_index()
+    total = len(shlokas)
+    return {
+        "status": "running",
+        "current_index": index,
+        "total_shlokas": total,
+        "remaining": total - index
+    }
+
+def run_scheduler():
+    """Run the scheduler in a separate thread"""
+    print("🤖 Twitter Bot Starting...")
+    print("📋 Preview mode - showing what will be tweeted:")
+    post_shloka()
+
+    # Schedule next posts
+    schedule.every().day.at("08:00").do(post_shloka)
+    schedule.every().day.at("20:00").do(post_shloka)
+
+    print("⏰ Bot scheduled for 08:00 and 20:00 daily")
+    print("🔄 Running continuously...")
+
+    # Main scheduler loop
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+if __name__ == "__main__":
+    # Start the scheduler in a background thread
+    scheduler_thread = Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+    
+    # Start the Flask web server
+    print("🌐 Starting web server on port 5000...")
+    app.run(host='0.0.0.0', port=5000, debug=False)
