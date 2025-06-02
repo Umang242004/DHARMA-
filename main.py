@@ -92,8 +92,7 @@ if __name__ == "__main__":
     # Start the scheduler in a background thread
     scheduler_thread = Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
-    
+
     # Start the Flask web server
     print("🌐 Starting web server on port 5000...")
     app.run(host='0.0.0.0', port=5000, debug=False)
-    post_shloka()
