@@ -22,7 +22,7 @@ client = tweepy.Client(
 # --- Load shlokas from file ---
 with open("shlokas.txt", "r", encoding="utf-8") as f:
     content = f.read()
-    shlokas = [s.strip() for s in content.split("") if s.strip()]
+    shlokas = [s.strip() for s in content.split("________________________________________") if s.strip()]
 
 index_file = "index.txt"
 
