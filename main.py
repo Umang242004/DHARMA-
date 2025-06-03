@@ -102,7 +102,7 @@ def run_scheduler():
         time.sleep(60)
 
 # --- Main ---
-if _name_ == "_main_":
+if __name__ == "__main__":
     scheduler_thread = Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     app.run(host="0.0.0.0", port=5000)
