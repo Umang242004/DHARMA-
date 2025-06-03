@@ -88,6 +88,7 @@ def run_scheduler():
     post_shloka()  # Optional: post one at startup
     schedule.every(5).minutes.do(post_shloka)
 print("📅 Scheduled to post every 5 minutes for testing.")
+
     while True:
         schedule.run_pending()
         time.sleep(60)
