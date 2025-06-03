@@ -1,17 +1,28 @@
+import os
+import time
+import requests
 import tweepy
 import schedule
-import time
-import os
 from flask import Flask
 from threading import Thread
 
-# Load Twitter API keys from environment
+# Load Twitter API keys from environment variables
 API_KEY = os.environ["API_KEY"]
 API_SECRET = os.environ["API_SECRET"]
 ACCESS_TOKEN = os.environ["ACCESS_TOKEN"]
 ACCESS_SECRET = os.environ["ACCESS_SECRET"]
 
-# Twitter auth - using API v2
+# JSONBin.io configuration
+BIN_ID = os.environ["BIN_ID"]  # e.g., '661fabcde12a5d1234567890a'
+API_KEY_JSONBIN = os.environ["JSONBIN_API_KEY"]  # Starts with $2b$
+
+HEADERS = {
+    "X-Master-Key": API_KEY_JSONBIN,
+    "Content-Type": "application/json"
+}
+BASE_URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
+
+# Tweepy client
 client = tweepy.Client(
     consumer_key=API_KEY,
     consumer_secret=API_SECRET,
@@ -19,41 +30,51 @@ client = tweepy.Client(
     access_token_secret=ACCESS_SECRET
 )
 
-# Load shlokas from a text file
+# Load shlokas
 with open("shlokas.txt", "r", encoding="utf-8") as f:
     content = f.read()
-    shlokas = [s.strip() for s in content.split("________________________________________") if s.strip()]
+    shlokas = [s.strip() for s in content.split("") if s.strip()]
 
-index_file = "index.txt"
-
+# --- JSONBin index management ---
 def get_index():
-    return int(open(index_file).read()) if os.path.exists(index_file) else 0
+    try:
+        res = requests.get(f"{BASE_URL}/latest", headers=HEADERS)
+        return res.json()["record"]["index"]
+    except Exception as e:
+        print("⚠ Error getting index:", e)
+        return 0
 
-def save_index(i):
-    with open(index_file, "w") as f:
-        f.write(str(i))
+def save_index(new_index):
+    try:
+        res = requests.put(BASE_URL, headers=HEADERS, json={"index": new_index})
+        if res.status_code == 200:
+            print("✅ Index saved.")
+        else:
+            print("❌ Failed to save index:", res.status_code, res.text)
+    except Exception as e:
+        print("❌ Exception saving index:", e)
 
+# --- Twitter posting function ---
 def post_shloka():
     index = get_index()
     if index < len(shlokas):
         tweet = shlokas[index]
-        print(f"\n🧪 Previewing Shloka #{index + 1}:\n\n{tweet}\n\n📤 Tweeting now...")
+        print(f"\n🧪 Posting Shloka #{index + 1}:\n\n{tweet}\n")
         try:
             response = client.create_tweet(text=tweet)
-            print("✅ Tweet sent successfully!\n")
-            print(f"Tweet ID: {response.data['id']}")
+            print(f"✅ Tweet sent! ID: {response.data['id']}")
             save_index(index + 1)
         except Exception as e:
-            print(f"❌ Error posting tweet: {e}")
+            print(f"❌ Tweet failed: {e}")
     else:
         print("🎉 All shlokas have been posted.")
 
-# Flask web server
-app = Flask(__name__)
+# --- Flask App for UptimeRobot ---
+app = Flask(_name_)
 
 @app.route('/')
 def home():
-    return "🤖 Twitter Bot is running! Status: Active"
+    return "🤖 Bot is online!"
 
 @app.route('/ping')
 def ping():
@@ -70,29 +91,18 @@ def status():
         "remaining": total - index
     }
 
+# --- Scheduler thread ---
 def run_scheduler():
-    """Run the scheduler in a separate thread"""
-    print("🤖 Twitter Bot Starting...")
-    print("📋 Preview mode - showing what will be tweeted:")
+    print("🤖 Scheduler running...")
     post_shloka()
-
-    # Schedule next posts
     schedule.every().day.at("08:00").do(post_shloka)
     schedule.every().day.at("20:00").do(post_shloka)
-
-    print("⏰ Bot scheduled for 08:00 and 20:00 daily")
-    print("🔄 Running continuously...")
-
-    # Main scheduler loop
     while True:
         schedule.run_pending()
         time.sleep(60)
 
-if __name__ == "__main__":
-    # Start the scheduler in a background thread
+# --- Main ---
+if _name_ == "_main_":
     scheduler_thread = Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
-
-    # Start the Flask web server
-    print("🌐 Starting web server on port 5000...")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000)
