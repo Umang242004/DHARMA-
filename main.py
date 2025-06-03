@@ -70,7 +70,7 @@ def post_shloka():
         print("🎉 All shlokas have been posted.")
 
 # --- Flask App for UptimeRobot ---
-app = Flask(_name_)
+app = Flask(__name__)  # ✅ Correct
 
 @app.route('/')
 def home():
