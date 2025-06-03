@@ -22,7 +22,7 @@ client = tweepy.Client(
 # --- Load shlokas from file ---
 with open("shlokas.txt", "r", encoding="utf-8") as f:
     content = f.read()
-    shlokas = [s.strip() for s in content.split("________________________________________") if s.strip()]
+    shlokas = [s.strip() for s in content.split("") if s.strip()]
 
 index_file = "index.txt"
 
@@ -80,6 +80,7 @@ def status():
 
 @app.route('/manual_tweet')
 def manual_tweet():
+    post_shloka()
     return "✅ Manually triggered tweet."
 
 # --- Scheduler ---
@@ -87,7 +88,7 @@ def run_scheduler():
     print("🤖 Scheduler started...")
     post_shloka()  # Optional: post one at startup
     schedule.every(5).minutes.do(post_shloka)
-print("📅 Scheduled to post every 5 minutes for testing.")
+    print("📅 Scheduled to post every 5 minutes for testing.")
 
     while True:
         schedule.run_pending()
