@@ -22,7 +22,7 @@ client = tweepy.Client(
 # --- Load shlokas from file ---
 with open("shlokas.txt", "r", encoding="utf-8") as f:
     content = f.read()
-    shlokas = [s.strip() for s in content.split("") if s.strip()]
+    shlokas = [s.strip() for s in content.split("________________________________________") if s.strip()]
 
 index_file = "index.txt"
 
@@ -57,7 +57,7 @@ def post_shloka():
         print("🎉 All shlokas have been posted.")
 
 # --- Flask app setup ---
-app = Flask(_name_)
+app = Flask(__name__)
 
 @app.route('/')
 def home():
@@ -96,7 +96,7 @@ def run_scheduler():
         time.sleep(60)
 
 # --- Main ---
-if _name_ == "_main_":
+if __name__ == "__main__":
     scheduler_thread = Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     print("🌐 Starting Flask server on port 5000...")
