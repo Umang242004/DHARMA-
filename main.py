@@ -80,17 +80,14 @@ def status():
 
 @app.route('/manual_tweet')
 def manual_tweet():
-    post_shloka()
     return "✅ Manually triggered tweet."
 
 # --- Scheduler ---
 def run_scheduler():
     print("🤖 Scheduler started...")
     post_shloka()  # Optional: post one at startup
-    # Adjusting for IST (UTC + 5:30) → 08:00 IST = 02:30 UTC
-    schedule.every().day.at("02:30").do(post_shloka)  # 08:00 IST
-    schedule.every().day.at("14:30").do(post_shloka)  # 20:00 IST
-    print("📅 Scheduled at 08:00 IST and 20:00 IST daily.")
+    schedule.every(5).minutes.do(post_shloka)
+print("📅 Scheduled to post every 5 minutes for testing.")
     while True:
         schedule.run_pending()
         time.sleep(60)
