@@ -7,15 +7,18 @@ import datetime
 from flask import Flask
 from threading import Thread
 
-# --- Twitter API keys from Render environment ---
+# --- Twitter API v2 Client Setup ---
 API_KEY = os.environ["API_KEY"]
 API_SECRET = os.environ["API_SECRET"]
 ACCESS_TOKEN = os.environ["ACCESS_TOKEN"]
 ACCESS_SECRET = os.environ["ACCESS_SECRET"]
 
-# --- Tweepy v1.1 API Client ---
-auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET)
-api = tweepy.API(auth)
+client = tweepy.Client(
+    consumer_key=API_KEY,
+    consumer_secret=API_SECRET,
+    access_token=ACCESS_TOKEN,
+    access_token_secret=ACCESS_SECRET
+)
 
 # --- Load shlokas ---
 with open("shlokas.txt", "r", encoding="utf-8") as f:
@@ -49,8 +52,8 @@ def post_shloka():
         if index < len(shlokas):
             tweet = shlokas[index]
             print(f"\n🧪 Posting Shloka #{index + 1}:\n\n{tweet}\n")
-            response = api.update_status(status=tweet)
-            print(f"✅ Tweet sent! ID: {response.id}")
+            response = client.create_tweet(text=tweet)
+            print(f"✅ Tweet sent! ID: {response.data['id']}")
             save_index(index + 1)
         else:
             print("🎉 All shlokas have been posted.")
@@ -88,8 +91,8 @@ def debug_tweet():
 @app.route('/auth_check')
 def auth_check():
     try:
-        user = api.verify_credentials()
-        return f"✅ Authenticated as @{user.screen_name}"
+        me = client.get_me()
+        return f"✅ Authenticated as @{me.data['username']}"
     except Exception as e:
         traceback.print_exc()
         return f"❌ Authentication failed: {e}"
