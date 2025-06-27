@@ -16,46 +16,55 @@ auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET
 api = tweepy.API(auth)
 
 # --- Load shlokas from file ---
-with open("shlokas.txt", "r", encoding="utf-8") as f:
-    content = f.read()
-    shlokas = [s.strip() for s in content.split("________________________________________") if s.strip()]
+try:
+    with open("shlokas.txt", "r", encoding="utf-8") as f:
+        content = f.read()
+        shlokas = [s.strip() for s in content.split("________________________________________") if s.strip()]
+    print(f"📄 Loaded shlokas.txt with {len(shlokas)} entries")
+except Exception as e:
+    shlokas = []
+    print(f"❌ Failed to load shlokas.txt: {e}")
 
 index_file = "index.txt"
 
 # --- Index tracking ---
 def get_index():
-    if os.path.exists(index_file):
-        try:
+    try:
+        if os.path.exists(index_file):
             with open(index_file) as f:
                 index = int(f.read().strip())
             print(f"📖 Current index: {index}")
             return index
-        except Exception as e:
-            print(f"⚠️ Error reading index.txt: {e}. Resetting to 0.")
+        else:
+            print("📖 index.txt not found. Starting from 0.")
             return 0
-    else:
-        print("📖 index.txt not found. Starting from 0.")
+    except Exception as e:
+        print(f"⚠️ Error reading index.txt: {e}. Resetting to 0.")
         return 0
 
 def save_index(i):
-    print(f"💾 Saving index: {i}")
-    with open(index_file, "w") as f:
-        f.write(str(i))
+    try:
+        print(f"💾 Saving index: {i}")
+        with open(index_file, "w") as f:
+            f.write(str(i))
+    except Exception as e:
+        print(f"❌ Error saving index: {e}")
 
 # --- Post tweet ---
 def post_shloka():
-    index = get_index()
-    if index < len(shlokas):
-        tweet = shlokas[index]
-        print(f"\n🧪 Posting Shloka #{index + 1}:\n\n{tweet}\n")
-        try:
+    print("🔔 post_shloka() called...")
+    try:
+        index = get_index()
+        if index < len(shlokas):
+            tweet = shlokas[index]
+            print(f"\n🧪 Posting Shloka #{index + 1}:\n\n{tweet}\n")
             response = api.update_status(status=tweet)
             print(f"✅ Tweet sent! ID: {response.id}")
             save_index(index + 1)
-        except Exception as e:
-            print(f"❌ Error posting tweet: {e}")
-    else:
-        print("🎉 All shlokas have been posted.")
+        else:
+            print("🎉 All shlokas have been posted.")
+    except Exception as e:
+        print(f"❌ Error inside post_shloka(): {e}")
 
 # --- Flask app setup ---
 app = Flask(__name__)
@@ -84,12 +93,22 @@ def manual_tweet():
     post_shloka()
     return "✅ Manually triggered tweet."
 
+@app.route('/debug_tweet')
+def debug_tweet():
+    print("🐞 /debug_tweet called")
+    post_shloka()
+    return "🔧 post_shloka() manually triggered"
+
 # --- Scheduler ---
 def run_scheduler():
     print("🤖 Scheduler started...")
-    post_shloka()  # Optional: post once at startup
 
-    # Schedule tweets at 08:00 IST and 20:00 IST (02:30 and 14:30 UTC)
+    try:
+        print("🔁 Attempting immediate post...")
+        post_shloka()
+    except Exception as e:
+        print(f"❌ Scheduler startup failed: {e}")
+
     schedule.every().day.at("02:30").do(post_shloka)  # 08:00 IST
     schedule.every().day.at("14:30").do(post_shloka)  # 20:00 IST
 
@@ -101,6 +120,7 @@ def run_scheduler():
 
 # --- Main ---
 if __name__ == "__main__":
+    print("📁 Current files in working dir:", os.listdir("."))
     scheduler_thread = Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     print("🌐 Starting Flask server on port 5000...")
