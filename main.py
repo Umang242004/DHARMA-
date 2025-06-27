@@ -1,18 +1,17 @@
 import os
 import time
-import traceback
 import tweepy
 import schedule
-import datetime
 from flask import Flask
 from threading import Thread
 
-# --- Twitter API v2 Client Setup ---
+# --- Twitter API keys from environment ---
 API_KEY = os.environ["API_KEY"]
 API_SECRET = os.environ["API_SECRET"]
 ACCESS_TOKEN = os.environ["ACCESS_TOKEN"]
 ACCESS_SECRET = os.environ["ACCESS_SECRET"]
 
+# --- Twitter API client ---
 client = tweepy.Client(
     consumer_key=API_KEY,
     consumer_secret=API_SECRET,
@@ -20,12 +19,10 @@ client = tweepy.Client(
     access_token_secret=ACCESS_SECRET
 )
 
-# --- Load shlokas ---
+# --- Load shlokas from file ---
 with open("shlokas.txt", "r", encoding="utf-8") as f:
     content = f.read()
     shlokas = [s.strip() for s in content.split("________________________________________") if s.strip()]
-print(f"📄 Loaded shlokas.txt with {len(shlokas)} entries")
-print(f"📁 Current files in working dir: {os.listdir('.')}")
 
 index_file = "index.txt"
 
@@ -46,20 +43,18 @@ def save_index(i):
 
 # --- Post tweet ---
 def post_shloka():
-    print("🔔 post_shloka() called...")
-    try:
-        index = get_index()
-        if index < len(shlokas):
-            tweet = shlokas[index]
-            print(f"\n🧪 Posting Shloka #{index + 1}:\n\n{tweet}\n")
+    index = get_index()
+    if index < len(shlokas):
+        tweet = shlokas[index]
+        print(f"\n🧪 Posting Shloka #{index + 1}:\n\n{tweet}\n")
+        try:
             response = client.create_tweet(text=tweet)
             print(f"✅ Tweet sent! ID: {response.data['id']}")
             save_index(index + 1)
-        else:
-            print("🎉 All shlokas have been posted.")
-    except Exception as e:
-        print("❌ Error during tweet:")
-        traceback.print_exc()
+        except Exception as e:
+            print(f"❌ Error posting tweet: {e}")
+    else:
+        print("🎉 All shlokas have been posted.")
 
 # --- Flask app setup ---
 app = Flask(__name__)
@@ -83,42 +78,29 @@ def status():
         "remaining": total - index
     }
 
-@app.route('/debug_tweet')
-def debug_tweet():
+@app.route('/manual_tweet')
+def manual_tweet():
     post_shloka()
-    return "✅ Debug tweet attempt triggered."
+    return "✅ Manually triggered tweet."
 
-@app.route('/auth_check')
-def auth_check():
-    try:
-        me = client.get_me()
-        return f"✅ Authenticated as @{me.data['username']}"
-    except Exception as e:
-        traceback.print_exc()
-        return f"❌ Authentication failed: {e}"
-
-# --- Scheduler setup ---
+# --- Scheduler ---
 def run_scheduler():
     print("🤖 Scheduler started...")
-    print("🔁 Attempting immediate post...")
-    post_shloka()
+    post_shloka()  # Optional: post one at startup
 
-    # Schedule at 08:00 and 20:00 IST → 02:30 & 14:30 UTC
-    schedule.every().day.at("02:30").do(lambda: post_with_log("02:30 UTC (8 AM IST)"))
-    schedule.every().day.at("14:30").do(lambda: post_with_log("14:30 UTC (8 PM IST)"))
+    # Schedule tweets at 08:00 IST and 20:00 IST (UTC+5:30 → 02:30 and 14:30 UTC)
+    schedule.every().day.at("02:30").do(post_shloka)  # 08:00 IST
+    schedule.every().day.at("14:30").do(post_shloka)  # 20:00 IST
 
-    print("📅 Scheduled for 8 AM and 8 PM IST (02:30 & 14:30 UTC)")
+    print("📅 Scheduled at 08:00 IST and 20:00 IST daily.")
+
     while True:
         schedule.run_pending()
         time.sleep(60)
-
-def post_with_log(label):
-    print(f"⏰ Scheduled tweet triggered at {label}")
-    post_shloka()
 
 # --- Main ---
 if __name__ == "__main__":
     scheduler_thread = Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     print("🌐 Starting Flask server on port 5000...")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)
