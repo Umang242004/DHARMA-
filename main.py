@@ -89,7 +89,7 @@ def run_scheduler():
     post_shloka()  # Optional: post one at startup
 
     # Schedule tweets at 08:00 IST and 20:00 IST (UTC+5:30 → 02:30 and 14:30 UTC)
-    schedule.every().day.at("02:30").do(post_shloka)  # 08:00 IST
+    schedule.every().day.at("14:25").do(post_shloka)  # 08:00 IST
     schedule.every().day.at("14:30").do(post_shloka)  # 20:00 IST
 
     print("📅 Scheduled at 08:00 IST and 20:00 IST daily.")
